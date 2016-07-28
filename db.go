@@ -9,35 +9,6 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
-type db interface {
-	Reset() error
-	Init() (err error)
-	ChannelRanking(chanID string, limit int) (ranking Rank, err error)
-	ChannelCount() (total int, err error)
-	Channels() (channels map[string]string, err error)
-	ChannelConfig(chanID, key, defaultValue string) (config string, err error)
-	GlobalConfig(key, defaultValue string) (config string, err error)
-
-	PlayerCount() (total int, err error)
-	PlayerChannelScore(chanID string, playerID PlayerID) (PlayerScore, error)
-
-	// stats command
-	incStats(key string) error
-	incChannelStats(chanID, key string) error
-	incPlayerStats(playerID PlayerID, key string) error
-	stats(key string) (interface{}, error)
-	channelStats(chanID, key string) (interface{}, error)
-	playerStats(playerID, key string) (interface{}, error)
-
-	nextGame(chanID string) (seed int64, nextRound int, err error)
-	incRoundPlayed(chanID string) error
-
-	// scores
-	saveScore(chanID, chanName string, scores Rank) error
-	playerRanking(limit int) (Rank, error)
-	playerScore(playerID PlayerID) (ps PlayerScore, err error)
-}
-
 var (
 	redisPrefix = "fam100"
 
@@ -45,7 +16,7 @@ var (
 	cNameKey, cConfigKey, gConfigKey                              string
 )
 
-var DefaultDB db
+var DefaultDB *RedisDB
 
 func init() {
 	DefaultDB = new(RedisDB)
