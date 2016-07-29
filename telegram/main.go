@@ -211,26 +211,18 @@ func (b *fam100Bot) handleInbox() {
 						switch {
 						case strings.HasPrefix(msg.Text, "/say"):
 							if b.cmdSay(msg) {
-								mainHandleSayTimer.UpdateSince(start)
-								mainHandleMessageTimer.UpdateSince(start)
 								continue
 							}
 						case strings.HasPrefix(msg.Text, "/channels"):
 							if b.cmdChannels(msg) {
-								mainHandleChannelsTimer.UpdateSince(start)
-								mainHandleMessageTimer.UpdateSince(start)
 								continue
 							}
 						case strings.HasPrefix(msg.Text, "/broadcast"):
 							if b.cmdBroadcast(msg) {
-								mainHandleBrodcastTimer.UpdateSince(start)
-								mainHandleMessageTimer.UpdateSince(start)
 								continue
 							}
 						}
 					}
-					mainHandlePrivateChatTimer.UpdateSince(start)
-					mainHandleMessageTimer.UpdateSince(start)
 					continue
 				}
 
@@ -238,22 +230,16 @@ func (b *fam100Bot) handleInbox() {
 				switch msg.Text {
 				case "/join", "/join@" + botName:
 					if b.cmdJoin(msg) {
-						mainHandleJoinTimer.UpdateSince(start)
-						mainHandleMessageTimer.UpdateSince(start)
 						continue
 					}
 				case "/score", "/score@" + botName:
 					if b.cmdScore(msg) {
-						mainHandleScoreTimer.UpdateSince(start)
-						mainHandleMessageTimer.UpdateSince(start)
 						continue
 					}
 				case "/help", "/help@" + botName:
 					continue
 					/*
 						if b.cmdHelp(msg) {
-							mainHandleHelpTimer.UpdateSince(start)
-							mainHandleMessageTimer.UpdateSince(start)
 							continue
 						}*/
 				}
@@ -263,13 +249,11 @@ func (b *fam100Bot) handleInbox() {
 				if chanID == "" || !ok {
 					log.Debug("channels not found", zap.String("chanID", chanID), zap.Object("msg", msg))
 					mainHandleNotFoundTimer.UpdateSince(start)
-					mainHandleMessageTimer.UpdateSince(start)
 					continue
 				}
 				if len(ch.quorumPlayer) < minQuorum {
 					// ignore message if no game started or it's not quorum yet
 					mainHandleMinQuorumTimer.UpdateSince(start)
-					mainHandleMessageTimer.UpdateSince(start)
 					continue
 				}
 
@@ -279,13 +263,9 @@ func (b *fam100Bot) handleInbox() {
 					Text:       msg.Text,
 					ReceivedAt: msg.ReceivedAt,
 				}
-
-				startSendingAt := time.Now()
 				ch.game.In <- gameMsg
-				mainSendToGameTimer.UpdateSince(startSendingAt)
 
 				log.Debug("sent to game", zap.String("chanID", chanID), zap.Object("msg", msg))
-				mainHandleMessageTimer.UpdateSince(start)
 			}
 
 		case chanID := <-timeoutChan:

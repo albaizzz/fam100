@@ -25,6 +25,8 @@ func InitQuestion(dbPath string) (numQuestion int, err error) {
 		return 0, err
 	}
 
+	// by default only use 80% of the question for all channels
+	// official channel will get 100% of the question by channel configuration
 	questionSize := DefaultQuestionDB.questionSize
 	DefaultQuestionLimit = int(float64(questionSize) * 0.8)
 
@@ -89,10 +91,6 @@ func (d *QuestionDB) AddQuestion(q Question) error {
 	})
 
 	return nil
-}
-
-func AddQuestion(q Question) error {
-	return DefaultQuestionDB.AddQuestion(q)
 }
 
 func (d *QuestionDB) GetQuestion(id string) (q Question, err error) {

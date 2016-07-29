@@ -42,24 +42,6 @@ var (
 	cmdHelpTimer  = metrics.NewRegisteredTimer("command.help.ns", metrics.DefaultRegistry)
 
 	mainHandleMigrationTimer = metrics.NewRegisteredTimer("main.handleMigration.ns", metrics.DefaultRegistry)
-	mainHandleMessageTimer   = metrics.NewRegisteredTimer("main.handleMessage.ns", metrics.DefaultRegistry)
-	mainSendToGameTimer      = metrics.NewRegisteredTimer("main.sendToGame.ns", metrics.DefaultRegistry)
-
-	// Todo should be removed
-	// handle say
-	mainHandleSayTimer = metrics.NewRegisteredTimer("main.handleSay.ns", metrics.DefaultRegistry)
-	// handle channles
-	mainHandleChannelsTimer = metrics.NewRegisteredTimer("main.handleChannels.ns", metrics.DefaultRegistry)
-	// handle broadcast
-	mainHandleBrodcastTimer = metrics.NewRegisteredTimer("main.handleBrodcast.ns", metrics.DefaultRegistry)
-	// handle join
-	mainHandleJoinTimer = metrics.NewRegisteredTimer("main.handleJoin.ns", metrics.DefaultRegistry)
-	// handle score
-	mainHandleScoreTimer = metrics.NewRegisteredTimer("main.handleScore.ns", metrics.DefaultRegistry)
-	// handle help
-	mainHandleHelpTimer = metrics.NewRegisteredTimer("main.handleHelp.ns", metrics.DefaultRegistry)
-	// handle privateChat
-	mainHandlePrivateChatTimer = metrics.NewRegisteredTimer("main.handlePrivateChat.ns", metrics.DefaultRegistry)
 
 	// hanle notFound
 	mainHandleNotFoundTimer = metrics.NewRegisteredTimer("main.handleNotFound.ns", metrics.DefaultRegistry)
