@@ -168,7 +168,7 @@ func formatRankText(rank fam100.Rank) string {
 	fmt.Fprintf(w, "\n")
 	lastPos := 0
 	if len(rank) == 0 {
-		fmt.Fprintf(w, fam100.T("Tidak ada\n"))
+		fmt.Fprintf(w, "Tidak ada\n")
 	} else {
 		for _, ps := range rank {
 			if lastPos != 0 && lastPos+1 != ps.Position {

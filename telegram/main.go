@@ -291,8 +291,8 @@ func (b *fam100Bot) handleInbox() {
 		case chanID := <-timeoutChan:
 			// chan failed to get quorum
 			delete(b.channels, chanID)
-			text := fmt.Sprintf(fam100.T("Permainan dibatalkan, jumlah pemain tidak cukup  😞"))
-			b.out <- bot.Message{Chat: bot.Chat{ID: chanID}, Text: text, Format: bot.Markdown, DiscardAfter: time.Now().Add(5 * time.Second)}
+			text := fmt.Sprintf("Permainan dibatalkan, jumlah pemain tidak cukup  😞")
+			b.out <- bot.Message{Chat: bot.Chat{ID: chanID}, Text: text, Format: bot.Markdown}
 			log.Info("Quorum timeout", zap.String("chanID", chanID))
 
 		case chanID := <-finishedChan:
@@ -338,10 +338,10 @@ func (b *fam100Bot) handleOutbox() {
 					var text string
 					if msg.Round == 1 {
 						gameStartedCount.Inc(1)
-						text = fmt.Sprintf(fam100.T("Game (id: %d) dimulai\n<b>siapapun boleh menjawab tanpa</b> /join\n"), msg.GameID)
+						text = fmt.Sprintf("Game (id: %d) dimulai\n<b>siapapun boleh menjawab tanpa</b> /join\n", msg.GameID)
 					}
 					roundStartedCount.Inc(1)
-					text += fmt.Sprintf(fam100.T("Ronde %d dari %d"), msg.Round, fam100.RoundPerGame)
+					text += fmt.Sprintf("Ronde %d dari %d", msg.Round, fam100.RoundPerGame)
 					text += "\n\n" + formatRoundText(msg.RoundText)
 					b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML, Retry: 3}
 
@@ -371,7 +371,7 @@ func (b *fam100Bot) handleOutbox() {
 			case fam100.RankMessage:
 				text := formatRankText(msg.Rank)
 				if msg.Final {
-					text = fam100.T("<b>Final score</b>:") + text
+					text = "<b>Final score</b>:" + text
 
 					// show leader board, TOP 3 + current game players
 					rank, err := fam100.DefaultDB.ChannelRanking(msg.ChanID, 3)
@@ -396,21 +396,21 @@ func (b *fam100Bot) handleOutbox() {
 					sort.Sort(rank)
 					text += "\n<b>Total Score</b>" + formatRankText(rank)
 
-					text += fmt.Sprintf("\nFull Score <a href=\"http://labs.yulrizka.com/fam100/scores.html?c=%s\">Lihat disini</a>\n", msg.ChanID)
-					text += fmt.Sprintf(fam100.T("\nGame selesai!"))
+					text += fmt.Sprintf("\n<a href=\"http://labs.yulrizka.com/fam100/scores.html?c=%s\">Full Score</a>\n", msg.ChanID)
+					text += fmt.Sprintf("\nGame selesai!")
 					motd, _ := messageOfTheDay(msg.ChanID)
 					if motd != "" {
 						text = fmt.Sprintf("%s\n\n%s", text, motd)
 					}
 				} else {
-					text = fam100.T("Score sementara:") + text
+					text = "Score sementara:" + text
 				}
 				b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML, Retry: 3}
 
 			case fam100.TickMessage:
 				if msg.TimeLeft == 30*time.Second || msg.TimeLeft == 10*time.Second {
-					text := fmt.Sprintf(fam100.T("sisa waktu %s"), msg.TimeLeft)
-					b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML, DiscardAfter: time.Now().Add(2 * time.Second)}
+					text := fmt.Sprintf("sisa waktu %s", msg.TimeLeft)
+					b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML}
 				}
 
 			case fam100.TextMessage:
@@ -455,8 +455,8 @@ func (c *channel) startQuorumTimer(wait time.Duration, out chan bot.Message) {
 			case <-ctx.Done(): //canceled
 				return
 			case <-time.After(tickAt.Sub(time.Now())):
-				text := fmt.Sprintf(fam100.T("Waktu sisa %s"), timeLeft)
-				out <- bot.Message{Chat: bot.Chat{ID: c.ID}, Text: text, Format: bot.Markdown, DiscardAfter: time.Now().Add(2 * time.Second)}
+				text := fmt.Sprintf("Waktu sisa %s", timeLeft)
+				out <- bot.Message{Chat: bot.Chat{ID: c.ID}, Text: text, Format: bot.Markdown}
 			}
 		}
 	}()
