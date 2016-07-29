@@ -54,6 +54,7 @@ func (r *RedisDB) Init() (err error) {
 	r.pool = &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
+		Wait:        true,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", ":6379")
 			if err != nil {
