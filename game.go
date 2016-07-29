@@ -14,7 +14,6 @@ var (
 	DelayBetweenRound    = 5 * time.Second
 	TickAfterWrongAnswer = false
 	RoundPerGame         = 3
-	DefaultQuestionLimit = 600
 	log                  zap.Logger
 
 	playerActiveMap = cache.New(5*time.Minute, 30*time.Second)
@@ -125,48 +124,35 @@ const (
 // Game can consists of multiple round
 // each round user will be asked question and gain points
 type Game struct {
-	ID               int64
-	ChanID           string
-	ChanName         string
-	State            State
-	TotalRoundPlayed int
-	RoundCount       int
-	players          map[string]Player
-	seed             int64
-	rank             Rank
-	currentRound     Round
-	p                Provider
+	ID           int64
+	ChanID       string
+	ChanName     string
+	State        State
+	RoundCount   int
+	players      map[string]Player
+	rank         Rank
+	currentRound Round
+	p            Provider
 
 	In chan Message
 }
 
 // NewGame create a new round
 func NewGame(chanID, chanName string, in chan Message, p Provider) (r *Game, err error) {
-	seed, totalRoundPlayed, err := DefaultDB.nextGame(chanID)
-	if err != nil {
-		return nil, err
-	}
 
 	return &Game{
-		ID:               int64(rand.Int31()),
-		ChanID:           chanID,
-		ChanName:         chanName,
-		State:            Created,
-		players:          make(map[string]Player),
-		seed:             seed,
-		TotalRoundPlayed: totalRoundPlayed,
-		In:               in,
+		ID:       int64(rand.Int31()),
+		ChanID:   chanID,
+		ChanName: chanName,
+		State:    Created,
+		players:  make(map[string]Player),
+		In:       in,
 	}, err
 }
 
 // Start the game
 func (g *Game) Start() {
 	g.State = Started
-	log.Info("Game started",
-		zap.String("chanID", g.ChanID),
-		zap.Int64("gameID", g.ID),
-		zap.Int64("seed", g.seed),
-		zap.Int("totalRoundPlayed", g.TotalRoundPlayed))
 
 	go func() {
 		g.p.GameStarted(g.ChanID, *g)
@@ -188,12 +174,6 @@ func (g *Game) Start() {
 }
 
 func (g *Game) startRound(currentRound int) error {
-	// TODO: move this to the newRound logic
-	g.TotalRoundPlayed++
-	if err := DefaultDB.incRoundPlayed(g.ChanID); err != nil {
-		log.Error("failed to increase totalRoundPlayed", zap.Int("totalRoundPlayed", g.TotalRoundPlayed), zap.Error(err))
-	}
-
 	r := g.p.NewRound(g.ChanID, g.players)
 
 	g.currentRound = r

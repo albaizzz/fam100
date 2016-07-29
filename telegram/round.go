@@ -1,4 +1,4 @@
-package fam100
+package main
 
 import (
 	"math/rand"
@@ -6,21 +6,30 @@ import (
 	"time"
 
 	"github.com/uber-go/zap"
+	"github.com/yulrizka/fam100"
 )
 
 // round represents with one question
 type round struct {
 	id        int64
 	q         Question
-	state     State
-	correct   []PlayerID // correct answer answered by a player, "" means not answered
-	players   map[PlayerID]Player
+	state     fam100.State
+	correct   []string // contains playerID that answered i-th answer, "" means not answered
+	players   map[string]fam100.Player
 	highlight map[int]bool
 
 	endAt time.Time
 }
 
-func newRound(seed int64, totalRoundPlayed int, players map[PlayerID]Player, questionLimit int) (*round, error) {
+type roundAnswers struct {
+	Text       string
+	Score      int
+	Answered   bool
+	PlayerName string
+	Highlight  bool
+}
+
+func newRound(seed int64, totalRoundPlayed int, players map[string]fam100.Player, questionLimit int) (*round, error) {
 	q, err := NextQuestion(seed, totalRoundPlayed, questionLimit)
 	if err != nil {
 		return nil, err
@@ -29,11 +38,11 @@ func newRound(seed int64, totalRoundPlayed int, players map[PlayerID]Player, que
 	return &round{
 		id:        int64(rand.Int31()),
 		q:         q,
-		correct:   make([]PlayerID, len(q.Answers)),
-		state:     Created,
+		correct:   make([]string, len(q.Answers)),
+		state:     fam100.Created,
 		players:   players,
 		highlight: make(map[int]bool),
-		endAt:     time.Now().Add(RoundDuration).Round(time.Second),
+		endAt:     time.Now().Add(fam100.RoundDuration).Round(time.Second),
 	}, nil
 }
 
@@ -42,34 +51,37 @@ func (r *round) timeLeft() time.Duration {
 }
 
 // questionText construct QNAMessage which contains questions, answers and score
-func (r *round) questionText(gameID string, showUnAnswered bool) QNAMessage {
-	ras := make([]roundAnswers, len(r.q.Answers))
+// TODO: remove QNAMessage
+func (r *round) questionText(gameID string, showUnAnswered bool) fam100.QNAMessage {
+	/*
+		ras := make([]roundAnswers, len(r.q.Answers))
 
-	for i, ans := range r.q.Answers {
-		ra := roundAnswers{
-			Text:  ans.String(),
-			Score: ans.Score,
+		for i, ans := range r.q.Answers {
+			ra := roundAnswers{
+				Text:  ans.String(),
+				Score: ans.Score,
+			}
+			if pID := r.correct[i]; pID != "" {
+				ra.Answered = true
+				ra.PlayerName = r.players[pID].Name
+			}
+			if r.highlight[i] {
+				ra.Highlight = true
+			}
+			ras[i] = ra
 		}
-		if pID := r.correct[i]; pID != "" {
-			ra.Answered = true
-			ra.PlayerName = r.players[pID].Name
-		}
-		if r.highlight[i] {
-			ra.Highlight = true
-		}
-		ras[i] = ra
-	}
 
-	msg := QNAMessage{
-		ChanID:         gameID,
-		QuestionText:   r.q.Text,
-		QuestionID:     r.q.ID,
-		ShowUnanswered: showUnAnswered,
-		TimeLeft:       r.timeLeft(),
-		Answers:        ras,
-	}
+		msg := fam100.QNAMessage{
+			ChanID:         gameID,
+			QuestionText:   r.q.Text,
+			QuestionID:     r.q.ID,
+			ShowUnanswered: showUnAnswered,
+			TimeLeft:       r.timeLeft(),
+			Answers:        ras,
+		}
+	*/
 
-	return msg
+	return fam100.QNAMessage{}
 }
 
 func (r *round) finised() bool {
@@ -84,14 +96,14 @@ func (r *round) finised() bool {
 }
 
 // ranking generates a rank for current round which contains player, answers and score
-func (r *round) ranking() Rank {
-	var roundScores Rank
-	lookup := make(map[PlayerID]PlayerScore)
+func (r *round) ranking() fam100.Rank {
+	var roundScores fam100.Rank
+	lookup := make(map[string]fam100.PlayerScore)
 	for i, pID := range r.correct {
 		if pID != "" {
 			score := r.q.Answers[i].Score
 			if ps, ok := lookup[pID]; !ok {
-				lookup[pID] = PlayerScore{
+				lookup[pID] = fam100.PlayerScore{
 					PlayerID: pID,
 					Name:     r.players[pID].Name,
 					Score:    score,
@@ -115,8 +127,8 @@ func (r *round) ranking() Rank {
 	return roundScores
 }
 
-func (r *round) answer(p Player, text string) (correct, answered bool, index int) {
-	if r.state != RoundStarted {
+func (r *round) answer(p fam100.Player, text string) (correct, answered bool, index int) {
+	if r.state != fam100.RoundStarted {
 		return false, false, -1
 	}
 
@@ -136,18 +148,17 @@ func (r *round) answer(p Player, text string) (correct, answered bool, index int
 	return false, false, -1
 }
 
-func (g *round) handleMessage(msg TextMessage, r *Round) (handled bool) {
-	log.Debug("startRound got message", zap.String("chanID", g.ChanID), zap.Object("msg", msg))
+// TODO: remove TextMessage, replace by bot.message
+func (r *round) handleMessage(msg fam100.TextMessage, gameID string) (handled bool) {
+	log.Debug("startRound got message", zap.String("chanID", msg.ChanID), zap.Object("msg", msg))
 	answer := msg.Text
+
 	correct, alreadyAnswered, idx := r.answer(msg.Player, answer)
 	if !correct {
-		if TickAfterWrongAnswer {
-			g.Out <- WrongAnswerMessage{ChanID: g.ChanID, TimeLeft: r.timeLeft()}
-		}
 		return true
 	}
 	if alreadyAnswered {
-		log.Debug("already answered", zap.String("chanID", g.ChanID), zap.String("by", string(r.correct[idx])))
+		log.Debug("already answered", zap.String("chanID", msg.ChanID), zap.String("by", string(r.correct[idx])))
 		return true
 	}
 
@@ -156,14 +167,14 @@ func (g *round) handleMessage(msg TextMessage, r *Round) (handled bool) {
 		zap.String("playerName", msg.Player.Name),
 		zap.String("answer", answer),
 		zap.Int("questionID", r.q.ID),
-		zap.String("chanID", g.ChanID),
-		zap.Int64("gameID", g.ID),
+		zap.String("chanID", msg.ChanID),
+		zap.String("gameID", gameID),
 		zap.Int64("roundID", r.id))
 
 	return false
 }
 
-func (g *Game) showAnswer(r *Round) {
+func (r *round) showAnswer() {
 	var show bool
 	// if there is no highlighted answer don't display
 	for _, v := range r.highlight {
@@ -176,11 +187,13 @@ func (g *Game) showAnswer(r *Round) {
 		return
 	}
 
-	qnaText := r.questionText(g.ChanID, false)
-	select {
-	case g.Out <- qnaText:
-	default:
-	}
+	// TODO: remove this change output message directly
+	/*
+		qnaText := r.questionText(g.ChanID, false)
+		select {
+		case g.Out <- qnaText:
+		default:
+		}*/
 
 	for i := range r.highlight {
 		r.highlight[i] = false

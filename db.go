@@ -140,7 +140,7 @@ func (r *RedisDB) PlayerCount() (total int, err error) {
 	return redis.Int(conn.Do("HLEN", pNameKey))
 }
 
-func (r *RedisDB) nextGame(chanID string) (seed int64, nextRound int, err error) {
+func (r *RedisDB) NextGame(chanID string) (seed int64, nextRound int, err error) {
 	defer dbNextGameTimer.UpdateSince(time.Now())
 
 	seed = int64(crc32.ChecksumIEEE([]byte(chanID)))
@@ -225,7 +225,7 @@ func (r RedisDB) playerStats(playerID, key string) (interface{}, error) {
 	return conn.Do("GET", rkey)
 }
 
-func (r *RedisDB) incRoundPlayed(chanID string) error {
+func (r *RedisDB) IncRoundPlayed(chanID string) error {
 	return r.incChannelStats(chanID, "played")
 }
 

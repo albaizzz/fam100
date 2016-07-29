@@ -54,7 +54,7 @@ func (l logger) Error(msg string, fields ...zap.Field) {
 
 func init() {
 	log = logger{zap.NewJSON(zap.AddCaller(), zap.AddStacks(zap.FatalLevel))}
-	fam100.ExtraQuestionSeed = 1
+	ExtraQuestionSeed = 1
 }
 
 func main() {
@@ -109,22 +109,22 @@ func mainFn() {
 	if path := os.Getenv("QUESTION_DB_PATH"); path != "" {
 		dbPath = path
 	}
-	if n, err := fam100.InitQuestion(dbPath); err != nil {
+	if n, err := InitQuestion(dbPath); err != nil {
 		log.Fatal("Failed loading question DB", zap.Error(err))
 	} else {
 		log.Info("Question loaded", zap.Int("nQuestion", n))
 	}
 	if defaultQuestionLimit >= 0 {
-		fam100.DefaultQuestionLimit = defaultQuestionLimit
+		DefaultQuestionLimit = defaultQuestionLimit
 	}
-	log.Info("Question limit ", zap.Int("fam100.DefaultQuestionLimit", fam100.DefaultQuestionLimit))
+	log.Info("Question limit ", zap.Int("DefaultQuestionLimit", DefaultQuestionLimit))
 
 	defer func() {
 		if r := recover(); r != nil {
-			fam100.DefaultQuestionDB.Close()
+			DefaultQuestionDB.Close()
 			panic(r)
 		}
-		fam100.DefaultQuestionDB.Close()
+		DefaultQuestionDB.Close()
 	}()
 
 	if err := fam100.DefaultDB.Init(); err != nil {
@@ -167,7 +167,6 @@ func (b *fam100Bot) Init(out chan bot.Message) (in chan interface{}, err error) 
 }
 
 func (b *fam100Bot) start() {
-	go b.handleOutbox()
 	go b.handleInbox()
 }
 
@@ -251,7 +250,7 @@ func (b *fam100Bot) handleInbox() {
 
 				// pass message to the fam100 game package
 				gameMsg := fam100.TextMessage{
-					Player:     fam100.Player{ID: fam100.PlayerID(msg.From.ID), Name: msg.From.FullName()},
+					Player:     fam100.Player{ID: msg.From.ID, Name: msg.From.FullName()},
 					Text:       msg.Text,
 					ReceivedAt: msg.ReceivedAt,
 				}
