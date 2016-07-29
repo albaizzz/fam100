@@ -21,7 +21,6 @@ var (
 	messagePrivateCount  = metrics.NewRegisteredCounter("message.private.count", metrics.DefaultRegistry)
 	messageIncomingCount = metrics.NewRegisteredCounter("message.incoming.count", metrics.DefaultRegistry)
 	messageOutgoingCount = metrics.NewRegisteredCounter("message.outgoing.count", metrics.DefaultRegistry)
-	channelMigratedCount = metrics.NewRegisteredCounter("channel.migrated.count", metrics.DefaultRegistry)
 	commandJoinCount     = metrics.NewRegisteredCounter("command.join.count", metrics.DefaultRegistry)
 	commandScoreCount    = metrics.NewRegisteredCounter("command.score.count", metrics.DefaultRegistry)
 	roundStartedCount    = metrics.NewRegisteredCounter("round.started.count", metrics.DefaultRegistry)

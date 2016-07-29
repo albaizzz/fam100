@@ -6,11 +6,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"os/signal"
 	"runtime"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -86,10 +84,12 @@ func main() {
 }
 
 func mainFn() {
+	// setup logger
 	log.SetLevel(*logLevel)
 	bot.SetLogger(log)
 	fam100.SetLogger(log)
 
+	// enable profiling
 	go func() {
 		if blockProfileRate > 0 {
 			runtime.SetBlockProfileRate(blockProfileRate)
@@ -97,8 +97,6 @@ func mainFn() {
 		}
 		log.Info("http listener", zap.Error(http.ListenAndServe("localhost:5050", nil)))
 	}()
-
-	// setup logger
 	log.Info("Fam100 STARTED", zap.String("version", VERSION), zap.String("buildtime", BUILDTIME))
 
 	key := os.Getenv("TELEGRAM_KEY")
@@ -107,7 +105,6 @@ func mainFn() {
 	}
 	http.DefaultClient.Timeout = httpTimeout
 	fam100.RoundDuration = time.Duration(roundDuration) * time.Second
-	handleSignal()
 
 	dbPath := "fam100.db"
 	if path := os.Getenv("QUESTION_DB_PATH"); path != "" {
@@ -192,10 +189,6 @@ func (b *fam100Bot) handleInbox() {
 			}
 			messageIncomingCount.Inc(1)
 			switch msg := rawMsg.(type) {
-			case *bot.ChannelMigratedMessage:
-				b.handleChannelMigration(msg)
-				mainHandleMigrationTimer.UpdateSince(start)
-				continue
 			case *bot.Message:
 				if msg.Date.Before(startedAt) {
 					// ignore message that is received before the process started
@@ -279,23 +272,6 @@ func (b *fam100Bot) handleInbox() {
 			delete(b.channels, chanID)
 		}
 	}
-}
-
-// handleChannelMigration handles if channel is migrated from group -> supergroup (telegram specific)
-func (b *fam100Bot) handleChannelMigration(msg *bot.ChannelMigratedMessage) bool {
-	channelMigratedCount.Inc(1)
-	chanID := msg.Chat.ID
-	if ch, exists := b.channels[chanID]; exists {
-		// TODO migrate channel score
-		newID := msg.ToID
-		ch.ID = newID
-		ch.game.ChanID = newID
-		delete(b.channels, chanID)
-		b.channels[newID] = ch
-		log.Info("Channel migrated", zap.String("from", chanID), zap.String("to", newID))
-	}
-
-	return true
 }
 
 // handleOutbox handles outgoing message from game package
@@ -467,26 +443,6 @@ func (c *channel) startQuorumNotifyTimer(wait time.Duration, out chan bot.Messag
 		}
 	}()
 }
-
-func handleSignal() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGUSR1)
-
-	var prev = log.Level()
-	go func() {
-		for {
-			<-c
-			if log.Level() == zap.DebugLevel {
-				log.SetLevel(prev)
-			} else {
-				prev = log.Level()
-				log.SetLevel(zap.DebugLevel)
-			}
-			log.Info("log level switched to", zap.String("level", log.Level().String()))
-		}
-	}()
-}
-
 func messageOfTheDay(chanID string) (string, error) {
 	msgStr, err := fam100.DefaultDB.ChannelConfig(chanID, "motd", "")
 	if err != nil || msgStr == "" {
