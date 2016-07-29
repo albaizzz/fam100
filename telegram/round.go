@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/uber-go/zap"
 )
 
 // round represents with one question
@@ -132,4 +134,55 @@ func (r *round) answer(p Player, text string) (correct, answered bool, index int
 		return correct, false, i
 	}
 	return false, false, -1
+}
+
+func (g *round) handleMessage(msg TextMessage, r *Round) (handled bool) {
+	log.Debug("startRound got message", zap.String("chanID", g.ChanID), zap.Object("msg", msg))
+	answer := msg.Text
+	correct, alreadyAnswered, idx := r.answer(msg.Player, answer)
+	if !correct {
+		if TickAfterWrongAnswer {
+			g.Out <- WrongAnswerMessage{ChanID: g.ChanID, TimeLeft: r.timeLeft()}
+		}
+		return true
+	}
+	if alreadyAnswered {
+		log.Debug("already answered", zap.String("chanID", g.ChanID), zap.String("by", string(r.correct[idx])))
+		return true
+	}
+
+	log.Info("answer correct",
+		zap.String("playerID", string(msg.Player.ID)),
+		zap.String("playerName", msg.Player.Name),
+		zap.String("answer", answer),
+		zap.Int("questionID", r.q.ID),
+		zap.String("chanID", g.ChanID),
+		zap.Int64("gameID", g.ID),
+		zap.Int64("roundID", r.id))
+
+	return false
+}
+
+func (g *Game) showAnswer(r *Round) {
+	var show bool
+	// if there is no highlighted answer don't display
+	for _, v := range r.highlight {
+		if v {
+			show = true
+			break
+		}
+	}
+	if !show {
+		return
+	}
+
+	qnaText := r.questionText(g.ChanID, false)
+	select {
+	case g.Out <- qnaText:
+	default:
+	}
+
+	for i := range r.highlight {
+		r.highlight[i] = false
+	}
 }

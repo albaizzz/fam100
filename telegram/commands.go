@@ -37,7 +37,7 @@ func (b *fam100Bot) cmdJoin(msg *bot.Message) bool {
 		players := map[string]string{msg.From.ID: msg.From.FullName()}
 
 		gameIn := make(chan fam100.Message, gameInBufferSize)
-		game, err := fam100.NewGame(chanID, chanName, gameIn, b.gameOut)
+		game, err := fam100.NewGame(chanID, chanName, gameIn, fam100Provider{})
 		if err != nil {
 			log.Error("creating a game", zap.String("chanID", chanID))
 			return true

@@ -7,7 +7,6 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -270,112 +269,6 @@ func (b *fam100Bot) handleInbox() {
 
 		case chanID := <-finishedChan:
 			delete(b.channels, chanID)
-		}
-	}
-}
-
-// handleOutbox handles outgoing message from game package
-func (b *fam100Bot) handleOutbox() {
-	for {
-		select {
-		case <-b.quit:
-			return
-		case rawMsg := <-b.gameOut:
-
-			sent := true
-			switch msg := rawMsg.(type) {
-			default:
-				sent = false
-				// TODO: log error
-
-			case fam100.StateMessage:
-				switch msg.State {
-				case fam100.RoundStarted:
-					var text string
-					if msg.Round == 1 {
-						gameStartedCount.Inc(1)
-						text = fmt.Sprintf("Game (id: %d) dimulai\n<b>siapapun boleh menjawab tanpa</b> /join\n", msg.GameID)
-					}
-					roundStartedCount.Inc(1)
-					text += fmt.Sprintf("Ronde %d dari %d", msg.Round, fam100.RoundPerGame)
-					text += "\n\n" + formatRoundText(msg.RoundText)
-					b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML, Retry: 3}
-
-				case fam100.RoundFinished:
-					roundFinishedCount.Inc(1)
-
-				case fam100.RoundTimeout:
-					roundTimeoutCount.Inc(1)
-
-				case fam100.Finished:
-					gameFinishedCount.Inc(1)
-					finishedChan <- msg.ChanID
-				}
-
-			case fam100.QNAMessage:
-				text := formatRoundText(msg)
-
-				outMsg := bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML}
-				if !msg.ShowUnanswered {
-					answerCorrectCount.Inc(1)
-					outMsg.DiscardAfter = time.Now().Add(5 * time.Second)
-				} else {
-					// mesage at the end of timeout
-				}
-				b.out <- outMsg
-
-			case fam100.RankMessage:
-				text := formatRankText(msg.Rank)
-				if msg.Final {
-					text = "<b>Final score</b>:" + text
-
-					// show leader board, TOP 3 + current game players
-					rank, err := fam100.DefaultDB.ChannelRanking(msg.ChanID, 3)
-					if err != nil {
-						log.Error("getting channel ranking failed", zap.String("chanID", msg.ChanID), zap.Error(err))
-						continue
-					}
-					lookup := make(map[fam100.PlayerID]bool)
-					for _, v := range rank {
-						lookup[v.PlayerID] = true
-					}
-					for _, v := range msg.Rank {
-						if !lookup[v.PlayerID] {
-							playerScore, err := fam100.DefaultDB.PlayerChannelScore(msg.ChanID, v.PlayerID)
-							if err != nil {
-								continue
-							}
-
-							rank = append(rank, playerScore)
-						}
-					}
-					sort.Sort(rank)
-					text += "\n<b>Total Score</b>" + formatRankText(rank)
-
-					text += fmt.Sprintf("\n<a href=\"http://labs.yulrizka.com/fam100/scores.html?c=%s\">Full Score</a>\n", msg.ChanID)
-					text += fmt.Sprintf("\nGame selesai!")
-					motd, _ := messageOfTheDay(msg.ChanID)
-					if motd != "" {
-						text = fmt.Sprintf("%s\n\n%s", text, motd)
-					}
-				} else {
-					text = "Score sementara:" + text
-				}
-				b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML, Retry: 3}
-
-			case fam100.TickMessage:
-				if msg.TimeLeft == 30*time.Second || msg.TimeLeft == 10*time.Second {
-					text := fmt.Sprintf("sisa waktu %s", msg.TimeLeft)
-					b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML}
-				}
-
-			case fam100.TextMessage:
-				b.out <- bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: msg.Text}
-			}
-
-			if sent {
-				messageOutgoingCount.Inc(1)
-			}
 		}
 	}
 }

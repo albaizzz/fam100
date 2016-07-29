@@ -58,7 +58,7 @@ func TestSaveScore(t *testing.T) {
 	}
 
 	// test playerScore
-	var pid PlayerID = "ID1"
+	pid := "ID1"
 	ps, err := DefaultDB.playerScore(pid)
 	if err != nil {
 		t.Error(err)

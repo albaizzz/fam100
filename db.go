@@ -183,7 +183,7 @@ func (r RedisDB) incChannelStats(chanID, key string) error {
 	return err
 }
 
-func (r RedisDB) incPlayerStats(playerID PlayerID, key string) error {
+func (r RedisDB) incPlayerStats(playerID string, key string) error {
 	defer dbIncPlayerStatsTimer.UpdateSince(time.Now())
 
 	conn := r.pool.Get()
@@ -294,15 +294,15 @@ func (r RedisDB) getRanking(key string, limit int) (ranking Rank, err error) {
 	return ranking, nil
 }
 
-func (r RedisDB) playerScore(playerID PlayerID) (ps PlayerScore, err error) {
+func (r RedisDB) playerScore(playerID string) (ps PlayerScore, err error) {
 	return r.getScore(pRankKey, playerID)
 }
 
-func (r RedisDB) PlayerChannelScore(chanID string, playerID PlayerID) (PlayerScore, error) {
+func (r RedisDB) PlayerChannelScore(chanID string, playerID string) (PlayerScore, error) {
 	return r.getScore(cRankKey+chanID, playerID)
 }
 
-func (r RedisDB) getScore(key string, playerID PlayerID) (ps PlayerScore, err error) {
+func (r RedisDB) getScore(key string, playerID string) (ps PlayerScore, err error) {
 	defer dbGetScoreTimer.UpdateSince(time.Now())
 
 	conn := r.pool.Get()
