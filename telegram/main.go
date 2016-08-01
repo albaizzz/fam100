@@ -148,8 +148,7 @@ type fam100Bot struct {
 	channels map[string]*channel
 
 	// channel to communicate with game
-	gameOut chan fam100.Message
-	quit    chan struct{}
+	quit chan struct{}
 }
 
 func (*fam100Bot) Name() string {
@@ -159,7 +158,6 @@ func (*fam100Bot) Name() string {
 func (b *fam100Bot) Init(out chan bot.Message) (in chan interface{}, err error) {
 	b.in = make(chan interface{}, telegramInBufferSize)
 	b.out = out
-	b.gameOut = make(chan fam100.Message, gameOutBufferSize)
 	b.channels = make(map[string]*channel)
 	b.quit = make(chan struct{})
 
@@ -186,6 +184,7 @@ func (b *fam100Bot) handleInbox() {
 				log.Fatal("handleInbox input channel is closed")
 			}
 			messageIncomingCount.Inc(1)
+
 			switch msg := rawMsg.(type) {
 			case *bot.Message:
 				if msg.Date.Before(startedAt) {
@@ -194,6 +193,7 @@ func (b *fam100Bot) handleInbox() {
 					continue
 				}
 				log.Debug("handleInbox got message", zap.Object("msg", msg))
+
 				msgType := msg.Chat.Type
 				if msgType == bot.Private {
 					messagePrivateCount.Inc(1)
@@ -227,12 +227,6 @@ func (b *fam100Bot) handleInbox() {
 					if b.cmdScore(msg) {
 						continue
 					}
-				case "/help", "/help@" + botName:
-					continue
-					/*
-						if b.cmdHelp(msg) {
-							continue
-						}*/
 				}
 
 				chanID := msg.Chat.ID
@@ -243,7 +237,7 @@ func (b *fam100Bot) handleInbox() {
 					continue
 				}
 				if len(ch.quorumPlayer) < minQuorum {
-					// ignore message if no game started or it's not quorum yet
+					// ignore message if game is not started
 					mainHandleMinQuorumTimer.UpdateSince(start)
 					continue
 				}
