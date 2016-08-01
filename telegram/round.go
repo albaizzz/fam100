@@ -199,3 +199,7 @@ func (r *round) showAnswer() {
 		r.highlight[i] = false
 	}
 }
+
+func (r *round) Finished() bool {
+
+}

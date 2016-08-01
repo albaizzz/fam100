@@ -131,16 +131,18 @@ func (fam100Provider) DisplayTimeLeft(chanID string, d time.Duration) {
 	}
 }
 
-func (fam100Provider) DisplayAnswer(chanID) {
-	text := formatRoundText(msg)
+func (fam100Provider) DisplayAnswer(chanID string, r fam100.Round) {
+	//TODO
+	/*
+		text := formatRoundText(msg)
 
-	outMsg := bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML}
-	if !msg.ShowUnanswered {
-		answerCorrectCount.Inc(1)
-		outMsg.DiscardAfter = time.Now().Add(5 * time.Second)
-	} else {
-		// mesage at the end of timeout
-	}
-	b.out <- outMsg
-	// TODOL display answer to channel
+		outMsg := bot.Message{Chat: bot.Chat{ID: msg.ChanID}, Text: text, Format: bot.HTML}
+		if !msg.ShowUnanswered {
+			answerCorrectCount.Inc(1)
+			outMsg.DiscardAfter = time.Now().Add(5 * time.Second)
+		} else {
+			// mesage at the end of timeout
+		}
+		b.out <- outMsg
+	*/
 }

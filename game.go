@@ -40,7 +40,7 @@ type Round interface {
 }
 
 type Provider interface {
-	NewRound(chanID string, players map[string]Player) Round
+	NewRound(chanID string, players map[string]Player) (Round, error)
 	GameStarted(chanID string, g Game)
 	RoundStarted(chanID string, g Game, r Round)
 	RoundFinished(chanID string, g Game, r Round, timeout bool)
@@ -174,7 +174,7 @@ func (g *Game) Start() {
 }
 
 func (g *Game) startRound(currentRound int) error {
-	r := g.p.NewRound(g.ChanID, g.players)
+	r, _ := g.p.NewRound(g.ChanID, g.players)
 
 	g.currentRound = r
 	r.SetState(RoundStarted)
