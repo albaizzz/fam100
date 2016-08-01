@@ -149,29 +149,28 @@ func (r *round) answer(p fam100.Player, text string) (correct, answered bool, in
 }
 
 // TODO: remove TextMessage, replace by bot.message
-func (r *round) handleMessage(msg fam100.TextMessage, gameID string) (handled bool) {
-	log.Debug("startRound got message", zap.String("chanID", msg.ChanID), zap.Object("msg", msg))
-	answer := msg.Text
+func (r *round) HandleMessage(chanID string, game fam100.Game, player fam100.Player, answer string) {
+	log.Debug("startRound got message", zap.String("chanID", chanID), zap.Object("player", player), zap.String("answer", answer))
 
-	correct, alreadyAnswered, idx := r.answer(msg.Player, answer)
+	correct, alreadyAnswered, _ := r.answer(player, answer)
 	if !correct {
-		return true
+		return
 	}
 	if alreadyAnswered {
-		log.Debug("already answered", zap.String("chanID", msg.ChanID), zap.String("by", string(r.correct[idx])))
-		return true
+		log.Debug("already answered", zap.String("chanID", chanID), zap.Object("player", player))
+		return
 	}
 
 	log.Info("answer correct",
-		zap.String("playerID", string(msg.Player.ID)),
-		zap.String("playerName", msg.Player.Name),
+		zap.String("playerID", player.ID),
+		zap.String("playerName", player.Name),
 		zap.String("answer", answer),
 		zap.Int("questionID", r.q.ID),
-		zap.String("chanID", msg.ChanID),
-		zap.String("gameID", gameID),
+		zap.String("chanID", chanID),
+		zap.Int64("gameID", game.ID),
 		zap.Int64("roundID", r.id))
 
-	return false
+	return
 }
 
 func (r *round) showAnswer() {
@@ -201,5 +200,12 @@ func (r *round) showAnswer() {
 }
 
 func (r *round) Finished() bool {
+	return false
+}
 
+func (r *round) Rank() fam100.Rank {
+	return fam100.Rank{}
+}
+
+func (r *round) SetState(s fam100.State) {
 }

@@ -35,16 +35,16 @@ func SetLogger(l zap.Logger) {
 type Round interface {
 	SetState(s State)
 	Finished() bool
-	HandleMessage(chanID string, player Player, text string)
+	HandleMessage(chanID string, game Game, player Player, text string)
 	Rank() Rank
 }
 
 type Provider interface {
 	NewRound(chanID string, players map[string]Player) (Round, error)
-	GameStarted(chanID string, g Game)
-	RoundStarted(chanID string, g Game, r Round)
-	RoundFinished(chanID string, g Game, r Round, timeout bool)
-	GameFinished(chanID string, g Game)
+	GameStarted(chanID string, g *Game)
+	RoundStarted(chanID string, g *Game, r Round)
+	RoundFinished(chanID string, g *Game, r Round, timeout bool)
+	GameFinished(chanID string, g *Game)
 	DisplayTimeLeft(chanID string, d time.Duration)
 	DisplayAnswer(chanID string, r Round)
 }
@@ -155,7 +155,7 @@ func (g *Game) Start() {
 	g.State = Started
 
 	go func() {
-		g.p.GameStarted(g.ChanID, *g)
+		g.p.GameStarted(g.ChanID, g)
 
 		for i := 1; i <= RoundPerGame; i++ {
 			err := g.startRound(i)
@@ -169,7 +169,7 @@ func (g *Game) Start() {
 		}
 		g.State = Finished
 		log.Info("Game finished", zap.String("chanID", g.ChanID), zap.Int64("gameID", g.ID))
-		g.p.GameFinished(g.ChanID, *g)
+		g.p.GameFinished(g.ChanID, g)
 	}()
 }
 
@@ -182,7 +182,7 @@ func (g *Game) startRound(currentRound int) error {
 	timeLeftTick := time.NewTicker(tickDuration)
 	displayAnswerTick := time.NewTicker(tickDuration)
 
-	g.p.RoundStarted(g.ChanID, *g, r)
+	g.p.RoundStarted(g.ChanID, g, r)
 
 	for {
 		select {
@@ -196,7 +196,7 @@ func (g *Game) startRound(currentRound int) error {
 			gameLatencyTimer.UpdateSince(msg.ReceivedAt)
 			playerActiveMap.Set(string(msg.Player.ID), struct{}{}, cache.DefaultExpiration)
 
-			r.HandleMessage(msg.ChanID, msg.Player, msg.Text) //TODO: handle receivedAt or convert it to bot.Message
+			r.HandleMessage(msg.ChanID, *g, msg.Player, msg.Text) //TODO: handle receivedAt or convert it to bot.Message
 
 			if r.Finished() {
 				timeLeftTick.Stop()
@@ -204,7 +204,7 @@ func (g *Game) startRound(currentRound int) error {
 
 				r.SetState(RoundFinished)
 				g.updateRanking(r.Rank())
-				g.p.RoundFinished(g.ChanID, *g, r, false)
+				g.p.RoundFinished(g.ChanID, g, r, false)
 
 				gameMsgProcessTimer.UpdateSince(started)
 				gameServiceTimer.UpdateSince(msg.ReceivedAt)
@@ -229,7 +229,7 @@ func (g *Game) startRound(currentRound int) error {
 
 			g.State = RoundFinished
 			g.updateRanking(r.Rank())
-			g.p.RoundFinished(g.ChanID, *g, r, true)
+			g.p.RoundFinished(g.ChanID, g, r, true)
 
 			return nil
 		}
