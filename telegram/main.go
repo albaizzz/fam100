@@ -96,7 +96,19 @@ func mainFn() {
 		}
 		log.Info("http listener", zap.Error(http.ListenAndServe("localhost:5050", nil)))
 	}()
+
+	go func() {
+		sigchan := make(chan os.Signal, 1)
+		signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+
+		<-sigchan
+		postEvent("fam100 shutdown", "shutdown", fmt.Sprintf("shutdown version:%s buildtime:%s", VERSION, BUILDTIME))
+		log.Info("STOPED", zap.String("version", VERSION), zap.String("buildtime", BUILDTIME))
+		os.Exit(0)
+	}()
+
 	log.Info("Fam100 STARTED", zap.String("version", VERSION), zap.String("buildtime", BUILDTIME))
+	postEvent("startup", "startup", fmt.Sprintf("startup version:%s buildtime:%s", VERSION, BUILDTIME))
 
 	key := os.Getenv("TELEGRAM_KEY")
 	if key == "" {
