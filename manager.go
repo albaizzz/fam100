@@ -5,22 +5,29 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rcrowley/go-metrics"
 	"github.com/uber-go/zap"
 	"github.com/yulrizka/bot"
 )
 
 var (
-	gameQuorum   = 3
-	roundPerGame = 3
-	log          zap.Logger
+	maxActiveGame  = 400
+	GameQuorum     = 3
+	quorumDuration = 120 * time.Second
+	roundPerGame   = 3
+	log            zap.Logger
 )
 
 type state string
 
 const (
-	created  state = "created"
-	queued   state = "queued"
-	started  state = "started"
+	// game is in the queue
+	queued state = "queued"
+	// game is ready to be started (also possible still in the queue)
+	ready state = "ready"
+	// game is started
+	started state = "started"
+	// game is finished
 	finished state = "finished"
 )
 
@@ -33,73 +40,66 @@ type Chan struct {
 }
 
 type Round interface {
-	Finished() bool
-	HandleMessage(chanID string, game Game, player Player, text string)
+	ID() string
+	HandleMessage(game *Game, player Player, text string) (finished bool, err error)
 	Rank() Rank
 }
 
-type Provider interface {
-	NewRound(g *Game) (Round, error)
-	GameStarted(g *Game)
-	RoundStarted(g *Game, r Round)
-	RoundFinished(g *Game, r Round, timeout bool)
-	GameFinished(g *Game)
-	DisplayTimeLeft(d time.Duration)
-}
-
 type Manager struct {
-	botName  string
-	games    map[string]*Game
-	provider Provider
+	BotName string
+	games   map[string]*Game
+	handler Handler
+	log     zap.Logger
+
+	finishedCh chan string   // signal finished game
+	tokenQueue chan struct{} // token that each game needs to aquire before starting the game
+
+	QueueTimer metrics.Timer
 }
 
-func NewManager(botName string) *Manager {
+func NewManager(botName string, handler Handler) *Manager {
 	return &Manager{
-		botName: botName,
-		games:   make(map[string]*Game),
+		BotName:    botName,
+		games:      make(map[string]*Game),
+		handler:    handler,
+		tokenQueue: make(chan struct{}, maxActiveGame),
+		log:        log.With(zap.String("module", "manager"), zap.String("botName", "botName")),
 	}
 }
 
 func (m *Manager) Process(msg *bot.Message) error {
-	player := Player{ID: msg.ID, Name: msg.From.FullName(), Username: msg.From.Username}
-
-	// process join message
-	if msg.Text == "/join" || msg.Text == "/join@"+m.botName {
-		return m.processJoin(msg, player)
-	}
-
-	return nil
-}
-
-func (m *Manager) processJoin(msg *bot.Message, p Player) error {
-	if chanDisabled() {
-		return nil
-	}
 	chanID := msg.Chat.ID
 
-	game, ok := m.games[chanID]
-	if !ok {
-		g := newGame(Chan{ID: chanID, Name: msg.Chat.Title}, m.provider)
-		g.Players[p.ID] = p
-		m.games[chanID] = g
+	g, ok := m.games[chanID]
+	if msg.Text == "/join" || msg.Text == "/join@"+m.BotName {
+		if chanDisabled(chanID) {
+			return nil
+		}
 
-		if len(g.Players) == gameQuorum {
-			// TODO: start game
+		p := Player{ID: msg.ID, Name: msg.From.FullName(), Username: msg.From.Username}
+		if !ok {
+			// no game has been started yet
+			g = newGame(Chan{ID: chanID, Name: msg.Chat.Title}, m.handler, m.finishedCh, m.tokenQueue, m.log)
+			g.Players[p.ID] = p
+			m.games[chanID] = g
+		}
+		select {
+		case g.joinCh <- p:
+		default:
+			m.log.Warn("joinCh full", zap.String("chanID", chanID))
 		}
 		return nil
 	}
-
-	if _, ok = game.Players[p.ID]; ok {
-		return nil
+	select {
+	case g.msgCh <- msg:
+	default:
+		m.log.Warn("msgCh full", zap.String("chanID", chanID))
 	}
-
-	// new player
-	game.Players[p.ID] = p
-	if len(game.Players) == gameQuorum {
-		// TODO: start game
-	}
-
 	return nil
+}
+
+func (m *Manager) WaitingAvg() time.Duration {
+	return time.Duration(int64(m.QueueTimer.Mean()))
 }
 
 // NewID genate random string based on random number in base 36
@@ -107,6 +107,6 @@ func NewID() string {
 	return strconv.FormatInt(rand.Int63(), 36)
 }
 
-func chanDisabled() bool {
+func chanDisabled(chanID string) bool {
 	return false
 }
