@@ -11,6 +11,9 @@ import (
 const gameMsgBuffer = 100
 
 var (
+	//GameQuorum number of players needs to joined before the game start
+	GameQuorum = 3
+
 	notifyDuration   = 5 * time.Second
 	timeLeftDuration = 30 * time.Second
 )
@@ -46,6 +49,7 @@ type Handler interface {
 	GameFinished(g *Game, timeout bool)
 }
 
+// Game represent a game in a channel. Games can have multiple round
 type Game struct {
 	ID      string
 	Players map[string]Player
@@ -256,5 +260,6 @@ GAME:
 	g.finishWithTimeout(false)
 }
 
+// Send message to the channel
 func (g *Game) Send(text string, format bot.MessageFormat) {
 }

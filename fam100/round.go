@@ -16,6 +16,6 @@ func (q *quizRound) Rank() play.Rank {
 	panic("not implemented")
 }
 
-func (q *quizRound) ID() play.Rank {
+func (q *quizRound) ID() string {
 	panic("not implemented")
 }
