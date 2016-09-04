@@ -1,0 +1,3 @@
+[submodule "vendor/github.com/yulrizka/bot"]
+	path = vendor/github.com/yulrizka/bot
+	url = git@github.com:yulrizka/bot
