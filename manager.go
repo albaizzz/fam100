@@ -1,8 +1,6 @@
 package play
 
 import (
-	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -100,13 +98,4 @@ func (m *Manager) Process(msg *bot.Message) error {
 
 func (m *Manager) WaitingAvg() time.Duration {
 	return time.Duration(int64(m.QueueTimer.Mean()))
-}
-
-// NewID genate random string based on random number in base 36
-func NewID() string {
-	return strconv.FormatInt(rand.Int63(), 36)
-}
-
-func chanDisabled(chanID string) bool {
-	return false
 }

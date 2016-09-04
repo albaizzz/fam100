@@ -23,6 +23,7 @@ type fam100 struct {
 func (f *fam100) NewRound(g *play.Game, log zap.Logger) (r play.Round, timeout time.Duration, err error) {
 	round := newQuizRound()
 	f.log = log.With(zap.String("module", "fam100"))
+
 	return round, time.Duration(roundSeconds) * time.Second, nil
 }
 
